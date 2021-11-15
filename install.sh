@@ -9,7 +9,7 @@ sudo apt update
 sudo apt install openssh-server fish vim curl git -y
 sudo apt upgrade -y
 
-ssh-keygen -t ed25519 -C "admin@tseknet.com"
+ssh-keygen -t ed25519 -C "nxexenis@gmail.com"
 eval `ssh-agent -s`
 ssh-add
 chmod 0700 ~/.ssh # Ensure correct permissions
@@ -26,4 +26,4 @@ curl -sfL https://git.io/chezmoi | bash
 if [ ! -n "$(grep "^github.com " ~/.ssh/known_hosts)" ]; then ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null; fi
 
 export PATH=$HOME/bin:$PATH
-chezmoi init --apply --verbose git@github.com:tseknet/dotfiles.git
+chezmoi init --apply --verbose git@github.com:nikolas-x/dotfiles.git

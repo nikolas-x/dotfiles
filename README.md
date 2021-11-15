@@ -1,3 +1,5 @@
+# ⚠ NOTE: These are my personal settings. If you want to utilise this dotfile project please see the [upstream repository](https://github.com/TsekNet/dotfiles). -NX
+
 # TsekNet dotfiles 🛠
 
 Cross-platform automated system configuration. Run script. Setup System.

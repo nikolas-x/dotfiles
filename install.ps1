@@ -30,34 +30,43 @@
 
 [CmdletBinding()]
 param (
-  [System.Uri]$ModuleUri = 'https://raw.githubusercontent.com/TsekNet/dotfiles/main/dot_config/requirements.psd1',
+  [System.Uri]$ModuleUri = 'https://raw.githubusercontent.com/nikolas-x/dotfiles/main/dot_config/requirements.psd1',
   [System.IO.FileInfo]$ModuleFilePath = "$env:HOMEDRIVE\$env:HOMEPATH\.config",
 
   [System.IO.FileInfo]$SSHFile = "$env:USERPROFILE/.ssh/id_ed25519",
-  [String]$SSHEmail = 'admin@tseknet.com',
-  [String]$SSHUri = 'git@github.com:tseknet/dotfiles.git',
+  [String]$SSHEmail = 'nxexenis@gmail.com',
+  [String]$SSHUri = 'git@github.com:nikolas-x/dotfiles.git',
 
   [String[]]$Packages = @(
     '7zip'
+    'ag'
+    'audacity'
     'cascadiacodepl'
     'chezmoi'
+    'dotnet'
+    'discord'
+    'everything'
     'git'
     'gitversion.portable'
-    'google-backup-and-sync'
     'googlechrome'
     'greenshot'
+    'imageglass'
     'microsoft-edge'
+    'microsoft-teams'
     'microsoft-windows-terminal'
-    'mpc-hc'
+    'nvm'
     'notepadplusplus'
     'openssh'
-    'powershell-preview'
+    'paint.net'
+    'powershell'
     'python3'
     'spotify'
     'starship'
     'steam'
     'treesizefree'
-    'vscode-insiders'
+    'vlc'
+    'vscode'
+    'zoom'
   )
 )
 
@@ -129,6 +138,16 @@ Invoke-WebRequest -Uri $ModuleUri -UseBasicParsing -OutFile "$ModuleFilePath\req
 
 Write-Host 'Installing PowerShell modules...' -ForegroundColor Magenta
 Invoke-PSDepend -Path "$ModuleFilePath\requirements.psd1" -Import -Force
+
+
+# Install Get-ChildItemColor and PSWriteHTML directly because the above command fails for those
+# TODO: Follow this up
+Write-Host 'Installing Get-ChildItemColor and PSWriteHTML...' -ForegroundColor Magenta
+Install-Module Get-ChildItemColor -Scope CurrentUser -AllowClobber
+Import-Module Get-ChildItemColor
+
+Install-Module PSWriteHTML -Scope CurrentUser
+Import-Module PSWriteHTML
 
 ################################################################################
 # GitHub setup                                                                 #
