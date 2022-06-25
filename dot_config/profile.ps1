@@ -199,6 +199,7 @@ Invoke-Expression (&starship init powershell)
 ################################################################################
 # Set common aliases                                                           #
 ################################################################################
+Set-Alias -Name dir -Value Get-ChildItemColor -Scope Global -Option AllScope
 Set-Alias -Name g -Value git
 
 #endregion
