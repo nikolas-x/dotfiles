@@ -35,8 +35,8 @@ format = """\
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style) "
-truncation_length = 4
-home_symbol = "🏠"
+truncation_length = 8
+truncation_symbol = "…/"
 
 [character]
 error_symbol = "[❯](bold red)"
@@ -51,37 +51,6 @@ disabled = false
 ################################################################################
 # Custom Commands                                                              #
 ################################################################################
-
-[directory.substitutions]
-"C:/tmp" = "🚧"
-"C:/Tmp" = "🚧"
-"/mnt/c/tmp" = "🚧"
-"/mnt/C/Tmp" = "🚧"
-"D:/projects" = "🎨"
-"D:/Projects" = "🎨"
-"/mnt/d/projects" = "🎨"
-"/mnt/d/Projects" = "🎨"
-
-[custom.workspace]
-command = "echo -n $PWD | cut -d / -f 6"
-when = "g4d"
-format = "[\\[](bold cyan)[$symbol$output](yellow)[\\]](bold cyan) "
-
-[custom.ssh_root]
-# disabled = true
-description = "Display username on a ssh session, if different from standard user"
-command = "echo $USER"
-when = '[[ -n "$SSH_CONNECTION" ]] && ([[ "$USER" == "root" ]] || [[ -n "$SUDO_USER" ]] || [[ "$USER" != "$LOGNAME" ]])'
-shell = ["bash", "--noprofile", "--norc"]
-format = "[$output](red bold)"
-
-[custom.ssh_user]
-# disabled = true
-description = "Display username, if on a ssh session"
-command = "echo $USER"
-when = '([[ -n "$SSH_CONNECTION" ]] && [[ "$USER" != "root" ]] && [[ -z "$SUDO_USER" ]] && [[ "$USER" == "$LOGNAME" ]])'
-shell = ["bash", "--noprofile", "--norc"]
-format = "[$output](cyan)"
 
 ################################################################################
 # Modules config                                                               #
@@ -107,17 +76,15 @@ stashed    = "[⚑ $count](bold blue)"
 
 [username]
 disabled = true
-# format = "[$user]($style)"
-# style_user = "cyan"
-# style_root = "red bold"
-# show_always = false
 
 [hostname]
 format = "[@$hostname](cyan) "
 ssh_only = true
 
-[gcloud]
-format = '$symbol[\($region\)]($style) '
+[aws]
+format = '[$symbol($profile )(\($region\) )]($style)'
 
 [cmd_duration]
+min_time = 500
+show_milliseconds = true
 format = "[$duration](bold yellow)"
