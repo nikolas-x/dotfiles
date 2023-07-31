@@ -47,10 +47,20 @@ function Open-HistoryFile {
 
   $HISTORY_PATH = (Get-PSReadLineOption).HistorySavePath
 
-  switch ((Get-Host).Name) {
-    'Visual Studio Code Host' { Open-EditorFile $HISTORY_PATH }
-    'Windows PowerShell ISE Host' { psedit $HISTORY_PATH }
-    default { Start-Process "$env:windir\system32\notepad.exe" -ArgumentList $HISTORY_PATH }
+  if (Get-Command 'code' -ErrorAction SilentlyContinue)
+  {
+    code $HISTORY_PATH
+  }
+  else
+  {
+    if ($IsWindows)
+    {
+      Start-Process "$env:windir\system32\notepad.exe" -ArgumentList $HISTORY_PATH
+    }
+    else
+    {
+      vi $HISTORY_PATH
+    }
   }
 }
 
@@ -158,11 +168,6 @@ if ($IsWindows) {
 #endregion
 
 #region execution
-################################################################################
-# Update the console title with current PowerShell version                     #
-################################################################################
-$Host.UI.RawUI.WindowTitle = "PS | v$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
-
 ################################################################################
 # PSReadLine and prompt options                                                #
 ################################################################################
