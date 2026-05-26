@@ -1,4 +1,4 @@
-﻿<#
+<#
 .Synopsis
   Install TsekNet dotfiles.
 .DESCRIPTION
@@ -14,7 +14,7 @@
   7. Configure GitHub SSH keys
   8. Initialize Chezmoi (https://github.com/twpayne/chezmoi) to download and keep remaining dotfiles up-to-date
 .PARAMETER ModuleUri
- Fully qualified Uri for the requirements.psd1 file used by PSDepend to install depdendencies.
+ Fully qualified Uri for the requirements.psd1 file used by PSDepend to install dependencies.
  See https://github.com/RamblingCookieMonster/PSDepend for more information
 .PARAMETER ModulefilePath
  Destination path for the $ModuleUri parameter file (excluding requirements.psd1)
@@ -63,6 +63,7 @@ param (
     'spotify'
     'starship'
     'steam'
+    'tailscale'
     'treesizefree'
     'vlc'
     'vscode'
@@ -101,18 +102,16 @@ function Test-ChocolateyPackageInstalled {
 
   Process {
     if (Test-Path -Path $env:ChocolateyInstall) {
-      $packageInstalled = Test-Path -Path "$env:ChocolateyInstall\lib\$Package"
-    } else {
-      Write-Host "Can't find a chocolatey install directory..."
+      return (Test-Path -Path "$env:ChocolateyInstall\lib\$Package")
     }
-
-    return $packageInstalled
+    Write-Host "Can't find a chocolatey install directory..."
+    return $false
   }
 }
 
 $missing_packages = [System.Collections.ArrayList]::new()
 foreach ($package in $Packages) {
-  if (-not (Test-ChocolateyPackageInstalled($package))) {
+  if (-not (Test-ChocolateyPackageInstalled -Package $package)) {
     $missing_packages.Add($package)
   }
 }
@@ -122,14 +121,14 @@ if ($missing_packages) {
 }
 
 # Keep packages up to date
-if (-not (Test-ChocolateyPackageInstalled('choco-upgrade-all-at'))) {
+if (-not (Test-ChocolateyPackageInstalled -Package 'choco-upgrade-all-at')) {
   & choco install choco-upgrade-all-at --params "'/WEEKLY:yes /DAY:SUN /TIME:01:00'" --force
 }
 
 ################################################################################
 # Add commonly used modules (this must be done first)                          #
 ################################################################################
-Install-Module PSDepend -Scope CurrentUser
+Install-Module PSDepend -Scope CurrentUser -Force -AllowClobber
 Import-Module PSDepend
 
 Write-Host 'Downloading PowerShell module dependency list from GitHub...' -ForegroundColor Magenta
@@ -137,7 +136,7 @@ New-Item -ItemType Directory $ModuleFilePath -ErrorAction SilentlyContinue
 Invoke-WebRequest -Uri $ModuleUri -UseBasicParsing -OutFile "$ModuleFilePath\requirements.psd1"
 
 Write-Host 'Installing PowerShell modules...' -ForegroundColor Magenta
-Invoke-PSDepend -Path "$ModuleFilePath\requirements.psd1" -Import -Force
+Invoke-PSDepend -Path "$ModuleFilePath\requirements.psd1" -Force
 
 
 # Install Get-ChildItemColor and PSWriteHTML directly because the above command fails for those
@@ -154,8 +153,15 @@ Import-Module PSWriteHTML
 ################################################################################
 Write-Host 'Configuring GitHub SSH key...' -ForegroundColor Magenta
 
-# Use OpenSSH ssh-keygen rather than the one in path
-& "$env:ProgramFiles\OpenSSH-Win64\ssh-keygen.exe" -t ed25519 -C $SSHEmail
+$sshKeygen = "$env:ProgramFiles\OpenSSH-Win64\ssh-keygen.exe"
+if (-not (Test-Path $sshKeygen)) { $sshKeygen = 'ssh-keygen' }
+
+if (-not (Test-Path $SSHFile)) {
+  & $sshKeygen -t ed25519 -C $SSHEmail -f $SSHFile -N ([string]::Empty)
+} else {
+  Write-Host "SSH key already exists at $SSHFile; skipping keygen."
+}
+
 ssh-add $SSHFile
 
 # Copy resulting output to GitHub
@@ -167,7 +173,7 @@ Write-Host ']'
 
 # Wait until key is added to GitHub
 Write-Output 'Launching chrome to add SSH key. Press any key to continue...'
-Start-Process chrome 'https://github.com/settings/ssh/new'
+Start-Process 'https://github.com/settings/ssh/new'
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 
 ################################################################################

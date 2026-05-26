@@ -1,4 +1,4 @@
-﻿# ~/.config/starship.toml
+# ~/.config/starship.toml
 
 add_newline = false
 
@@ -11,9 +11,6 @@ format = """\
         ${custom.ssh_user}\
         $hostname\
         $aws\
-        $gcloud\
-        $singularity\
-        $kubernetes\
         $docker_context\
         (↓ Source control - for right side ↓)\
         $hg_branch\
@@ -52,6 +49,25 @@ disabled = false
 # Custom Commands                                                              #
 ################################################################################
 
+[custom.workspace]
+disabled = true
+
+[custom.ssh_root]
+description = "Display username on a ssh session, if different from standard user"
+command = "echo $USER"
+when = '[[ -n "$SSH_CONNECTION" ]] && ([[ "$USER" == "root" ]] || [[ -n "$SUDO_USER" ]] || [[ "$USER" != "$LOGNAME" ]])'
+shell = ["bash", "--noprofile", "--norc"]
+format = "[$output](red bold)"
+ignore_timeout = true
+
+[custom.ssh_user]
+description = "Display username, if on a ssh session"
+command = "echo $USER"
+when = '([[ -n "$SSH_CONNECTION" ]] && [[ "$USER" != "root" ]] && [[ -z "$SUDO_USER" ]] && [[ "$USER" == "$LOGNAME" ]])'
+shell = ["bash", "--noprofile", "--norc"]
+format = "[$output](cyan)"
+ignore_timeout = true
+
 ################################################################################
 # Modules config                                                               #
 ################################################################################
@@ -81,8 +97,14 @@ disabled = true
 format = "[@$hostname](cyan) "
 ssh_only = true
 
-[aws]
-format = '[$symbol($profile )(\($region\) )]($style)'
+[gcloud]
+disabled = true
+
+[kubernetes]
+disabled = true
+
+[singularity]
+disabled = true
 
 [cmd_duration]
 min_time = 500

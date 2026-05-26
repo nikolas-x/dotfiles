@@ -1,3 +1,6 @@
+# Skip loading profile when running in Cursor sandbox (fast, no network/modules)
+if ($env:NPM_CONFIG_CACHE -and $env:NPM_CONFIG_CACHE -eq 'cursor-sandbox-cache') { return }
+
 #region functions
 
 function Get-FileHash256 {
@@ -28,7 +31,7 @@ function Get-FileHash256 {
 }
 
 function Edit-Profile {
-  code $profile.CurrentUserAllHosts
+  & code $profile.CurrentUserAllHosts
 }
 
 function Open-HistoryFile {
@@ -45,6 +48,10 @@ function Open-HistoryFile {
     Open-HistoryFile
   #>
 
+  if (-not (Get-Module PSReadLine)) {
+    Write-Warning 'PSReadLine not loaded; cannot open history file.'
+    return
+  }
   $HISTORY_PATH = (Get-PSReadLineOption).HistorySavePath
 
   if (Get-Command 'code' -ErrorAction SilentlyContinue)
@@ -168,6 +175,17 @@ if ($IsWindows) {
 #endregion
 
 #region execution
+
+################################################################################
+# Update the console title with current PowerShell elevation and version       #
+################################################################################
+$baseTitle = "PS | v$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
+try {
+  $Host.UI.RawUI.WindowTitle = "$baseTitle | $((Invoke-WebRequest -Uri 'https://wttr.in/nyc?format=%c%t&u' -UseBasicParsing -TimeoutSec 3).Content)"
+} catch {
+  $Host.UI.RawUI.WindowTitle = "$baseTitle | $env:COMPUTERNAME"
+}
+
 ################################################################################
 # PSReadLine and prompt options                                                #
 ################################################################################
@@ -177,34 +195,74 @@ if (-not (Get-Module PSReadline)) {
 else {
   Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
   Set-PSReadLineOption -ShowToolTips -BellStyle Visual -HistoryNoDuplicates
-  Set-PSReadLineOption -PredictionSource History
+  try {
+    Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView
+  } catch {
+    # PredictionSource / PredictionViewStyle require PSReadLine 2.1+ (e.g. not in WinPS 5.1)
+  }
 
-  if ($env:STARSHIP_SHELL -eq 'powershell') {
+  if ($env:STARSHIP_SHELL -in 'powershell', 'pwsh') {
     # Set the prompt character to change color based on syntax errors
     # https://github.com/PowerShell/PSReadLine/issues/1541#issuecomment-631870062
-    $esc = [char]0x1b # Escape Character
+    $esc = [char]0x1b
     $symbol = [char]0x276F  # ❯
-    $fg = '0' # white foreground
-    $bg = '8;2;78;213;93'  # 24-bit color code
-    $err_bg = '1' # Error Background
-
+    $fg = '0'
+    $bg = '8;2;78;213;93'  # 24-bit color
+    $err_bg = '1'
+    $csi = "$esc" + "["
     Set-PSReadLineOption -PromptText (
-      " $esc[4$esc[4${fg};3${bg}m$symbol ",
-      " $esc[4$esc[4${fg};3${err_bg}m$symbol "
+      " ${csi}4${fg};3${bg}m$symbol ",
+      " ${csi}4${fg};3${err_bg}m$symbol "
     )
+    $env:STARSHIP_LOG = 'error'
   }
 }
 
-# Chezmoi edit command defaults to vi, which doesn't exist on Windows
-$env:EDITOR = 'code'
+# https://starship.rs/ — cache init script so we don't spawn starship every startup
+$starshipCacheDir = if ($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } elseif ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $env:HOME '.cache' }
+$starshipCache = Join-Path $starshipCacheDir 'starship-init.ps1'
+$cacheMaxAgeHours = 24
+$useCache = (Test-Path $starshipCache) -and ((Get-Item $starshipCache).LastWriteTime -gt (Get-Date).AddHours(-$cacheMaxAgeHours))
+if ($useCache) {
+  . $starshipCache
+} else {
+  $init = & starship init powershell 2>$null
+  if ($init) {
+    New-Item -ItemType Directory -Path $starshipCacheDir -Force | Out-Null
+    $init | Set-Content -Path $starshipCache -Encoding utf8 -Force
+    Invoke-Expression ($init -join "`n")
+  } else {
+    Invoke-Expression (&starship init powershell)
+  }
+}
 
-# https://starship.rs/
-Invoke-Expression (&starship init powershell)
+################################################################################
+# Windows/Linux differences                                                    #
+################################################################################
+if ($IsLinux -or $IsMacOs) {
+  # PSDepend doesn't seem to work on PS7 on Linux, install modules here.
+  Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+  $modules = @('PowerShellGet', 'PSReadLine', 'Get-ChildItemColor', 'PSWriteHTML')
+  $available = (Get-Module -ListAvailable).Name
+  foreach ($module in $modules) {
+    if ($module -notin $available) {
+      Install-Module $module -AllowClobber -AllowPrerelease -Scope CurrentUser -Force
+    }
+  }
+} else {
+  # Chezmoi edit command defaults to vi, which doesn't exist on Windows
+  $env:EDITOR = 'code'
+}
 
 ################################################################################
 # Set common aliases                                                           #
 ################################################################################
-Set-Alias -Name dir -Value Get-ChildItemColor -Scope Global -Option AllScope
+if (Get-Command Get-ChildItemColor -ErrorAction SilentlyContinue) {
+  Set-Alias -Name ll -Value Get-ChildItemColor -Scope Global -Option AllScope
+  Set-Alias -Name ls -Value Get-ChildItemColorFormatWide -Scope Global -Option AllScope
+  Set-Alias -Name dir -Value Get-ChildItemColorFormatWide -Scope Global -Option AllScope
+}
 Set-Alias -Name g -Value git
+Set-Alias -Name History -Value Open-HistoryFile -Scope Global -Option AllScope
 
 #endregion
