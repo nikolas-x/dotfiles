@@ -180,11 +180,7 @@ if ($IsWindows) {
 # Update the console title with current PowerShell elevation and version       #
 ################################################################################
 $baseTitle = "PS | v$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
-try {
-  $Host.UI.RawUI.WindowTitle = "$baseTitle | $((Invoke-WebRequest -Uri 'https://wttr.in/nyc?format=%c%t&u' -UseBasicParsing -TimeoutSec 3).Content)"
-} catch {
-  $Host.UI.RawUI.WindowTitle = "$baseTitle | $env:COMPUTERNAME"
-}
+$Host.UI.RawUI.WindowTitle = "$baseTitle | $env:COMPUTERNAME"
 
 ################################################################################
 # PSReadLine and prompt options                                                #
@@ -272,9 +268,10 @@ if ($IsLinux -or $IsMacOs) {
 # Set common aliases                                                           #
 ################################################################################
 if (Get-Command Get-ChildItemColor -ErrorAction SilentlyContinue) {
-  Set-Alias -Name ll -Value Get-ChildItemColor -Scope Global -Option AllScope
-  Set-Alias -Name ls -Value Get-ChildItemColorFormatWide -Scope Global -Option AllScope
-  Set-Alias -Name dir -Value Get-ChildItemColorFormatWide -Scope Global -Option AllScope
+  if ($IsWindows) {
+    Set-Alias -Name ls -Value Get-ChildItemColor -Scope Global -Option AllScope
+  }
+  Set-Alias -Name dir -Value Get-ChildItemColor -Scope Global -Option AllScope
 }
 Set-Alias -Name g -Value git
 Set-Alias -Name History -Value Open-HistoryFile -Scope Global -Option AllScope
