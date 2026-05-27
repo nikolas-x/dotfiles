@@ -122,25 +122,6 @@ function Read-JWT {
   return $tokobj
 }
 
-function Get-StringHash {
-  [CmdletBinding()]
-  [OutputType([System.String])]
-  param (
-      [ValidateScript({ ![System.String]::IsNullOrEmpty($PSItem) })][System.String]$String,
-      [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512')][System.String]$Algorithm
-  )
-  process {
-      $ErrorActionPreference = 'stop'
-      Set-StrictMode -Version 'latest'
-
-      $inputBytes    = [System.Text.Encoding]::UTF8.GetBytes($String)
-      $hashAlgorithm = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
-      # [System.Security.Cryptography.HashAlgorithmName]
-
-      return ( [System.BitConverter]::ToString( $hashAlgorithm.ComputeHash($inputBytes) ) -replace '-' )
-  }
-}
-
 function Write-Definition($command) {
   Write-Output (Get-Command $command).Definition
 }
@@ -260,13 +241,21 @@ if ($useCache) {
 ################################################################################
 if ($IsLinux -or $IsMacOs) {
   # PSDepend doesn't seem to work on PS7 on Linux, install modules here.
-  Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
   $modules = @('PowerShellGet', 'PSReadLine', 'Get-ChildItemColor', 'PSWriteHTML')
-  $available = (Get-Module -ListAvailable).Name
+  $missing = @()
+
   foreach ($module in $modules) {
-    if ($module -notin $available) {
-      Install-Module $module -AllowClobber -AllowPrerelease -Scope CurrentUser -Force
+    if (-not (Get-Module $module -ErrorAction SilentlyContinue)) {
+      $missing += $module
     }
+  }
+
+  if ($missing.Count -gt 0) {
+    # Background job for installing modules
+    Start-Job -ScriptBlock {
+      Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+      $using:missing | ForEach-Object { Install-Module $_ -AllowClobber -AllowPrerelease -Scope CurrentUser -Force }
+    } | Out-Null
   }
 
   # Initialise homebrew if available
