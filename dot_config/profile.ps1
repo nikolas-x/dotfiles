@@ -249,6 +249,12 @@ if ($IsLinux -or $IsMacOs) {
       Install-Module $module -AllowClobber -AllowPrerelease -Scope CurrentUser -Force
     }
   }
+
+  # Initialise homebrew if available
+  $brewPath = if ($IsMacOs) { '/opt/homebrew/bin/brew' } else { '/home/linuxbrew/.linuxbrew/bin/brew' }
+  if (Test-Path $brewPath) {
+    & $brewPath shellenv | Invoke-Expression
+  }
 } else {
   # Chezmoi edit command defaults to vi, which doesn't exist on Windows
   $env:EDITOR = 'code'
