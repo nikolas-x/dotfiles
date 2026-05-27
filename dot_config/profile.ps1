@@ -122,6 +122,25 @@ function Read-JWT {
   return $tokobj
 }
 
+function Get-StringHash {
+  [CmdletBinding()]
+  [OutputType([System.String])]
+  param (
+      [ValidateScript({ ![System.String]::IsNullOrEmpty($PSItem) })][System.String]$String,
+      [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512')][System.String]$Algorithm
+  )
+  process {
+      $ErrorActionPreference = 'stop'
+      Set-StrictMode -Version 'latest'
+
+      $inputBytes    = [System.Text.Encoding]::UTF8.GetBytes($String)
+      $hashAlgorithm = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
+      # [System.Security.Cryptography.HashAlgorithmName]
+
+      return ( [System.BitConverter]::ToString( $hashAlgorithm.ComputeHash($inputBytes) ) -replace '-' )
+  }
+}
+
 function Write-Definition($command) {
   Write-Output (Get-Command $command).Definition
 }
