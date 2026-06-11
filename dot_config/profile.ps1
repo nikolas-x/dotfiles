@@ -31,7 +31,7 @@ function Get-FileHash256 {
 }
 
 function Edit-Profile {
-  & code $profile.CurrentUserAllHosts
+  & code $env:HOMEDRIVE\$env:HOMEPATH\.config\profile.ps1
 }
 
 function Open-HistoryFile {
@@ -214,6 +214,7 @@ else {
   }
 }
 
+
 # https://starship.rs/ — cache init script so we don't spawn starship every startup
 $starshipCacheDir = if ($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } elseif ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $env:HOME '.cache' }
 $starshipCache = Join-Path $starshipCacheDir 'starship-init.ps1'
@@ -267,7 +268,7 @@ if ($IsLinux -or $IsMacOs) {
 ################################################################################
 # Set common aliases                                                           #
 ################################################################################
-if (Get-Command Get-ChildItemColor -ErrorAction SilentlyContinue) {
+if (Get-Module Get-ChildItemColor) {
   if ($IsWindows) {
     Set-Alias -Name ls -Value Get-ChildItemColor -Scope Global -Option AllScope
   }
